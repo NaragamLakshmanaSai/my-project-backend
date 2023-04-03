@@ -32,7 +32,8 @@ app.get("/articles/:type/:id", async (req, res) => {
 
 app.put("/articles/:type/:id/like_and_comment", async (req, res) => {
   const { type, id } = req.params;
-  const {like, comment, userName} = req.body;
+  let {like, comment, userName} = req.body;
+  userName = userName || "anonymus"
 
   if(like){
     const blog = await db.collection(type).updateOne({ name: id }, {
@@ -42,7 +43,7 @@ app.put("/articles/:type/:id/like_and_comment", async (req, res) => {
     });
   }
 
-  if(comment&&userName){
+  if(comment){
     const blog = await db.collection(type).updateOne({ name: id }, {
         $push: {
             comments: { comment, userName }
@@ -53,9 +54,18 @@ app.put("/articles/:type/:id/like_and_comment", async (req, res) => {
   res.send("success");
 });
 
+app.put("/articles/:type/:id/delete", async (req, res) => {
+  const { type, id } = req.params;
+
+  if(type && id){
+    const blog = await db.collection(type).deleteOne({ name: id });
+  }
+
+  res.send("success");
+});
+
 app.put("/publish-article", async(req, res) => {
   const {name, title, content, type} = req.body
-  console.log(name, title, content, type);
 
   let contentArray = content.split('\n')
 
