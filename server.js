@@ -18,8 +18,9 @@ app.use(
 app.post("/articles/:type", async (req, res) => {
   const { type } = req.params;
   const { filter } = req.body;
+  const { approved } = req.query
 
-  const articles = await db.collection(type).find({ "title" : { "$regex" : filter , "$options" : "i"}}).toArray();
+  const articles = await db.collection(type).find({ $and: [{"approved": {"$eq": approved}}, { "title" : { "$regex" : filter , "$options" : "i"} } ] }).toArray();
   res.send(articles);
 });
 
@@ -30,9 +31,9 @@ app.get("/articles/:type/:id", async (req, res) => {
   res.send(blog);
 });
 
-app.put("/articles/:type/:id/like_and_comment", async (req, res) => {
+app.put("/articles/:type/:id/like_comment_approve", async (req, res) => {
   const { type, id } = req.params;
-  let {like, comment, userName} = req.body;
+  let {like, comment, userName, approved} = req.body;
   userName = userName || "anonymus"
 
   if(like){
@@ -43,11 +44,20 @@ app.put("/articles/:type/:id/like_and_comment", async (req, res) => {
     });
   }
 
-  if(comment){
+  else if(comment){
     const blog = await db.collection(type).updateOne({ name: id }, {
         $push: {
             comments: { comment, userName }
         }
+    });
+  }
+
+  else if(approved){
+    console.log("apprved", approved);
+    const blog = await db.collection(type).updateOne({ name: id }, {
+      $set: {
+          approved: approved
+      }
     });
   }
 
@@ -69,8 +79,23 @@ app.put("/publish-article", async(req, res) => {
 
   let contentArray = content.split('\n')
 
-  await db.collection(type).insertOne({name, title, content: contentArray})
+  await db.collection(type).insertOne({name, title, content: contentArray, approved: "false"})
   res.send("Published Successfully")
+})
+
+app.put("/user/create-account", async(req, res) => {
+  const { name, phoneNumber, email, password } = req.body
+
+  await db.collection("user").insertOne({name, phoneNumber, email, password})
+
+  res.send("Registered Successfully")
+})
+
+app.post("/user/login", async(req, res) => {
+  const { email, password } = req.body
+
+  const user = await db.collection("user").findOne({ email, password})
+  res.send(user)
 })
 
 const connectToDB = async() => {
