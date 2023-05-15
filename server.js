@@ -18,10 +18,11 @@ app.use(
 app.post("/articles/:type", async (req, res) => {
   const { type } = req.params;
   const { filter } = req.body;
-  const { approved } = req.query
+  const { approved, pageNo, pageSize } = req.query
 
-  const articles = await db.collection(type).find({ $and: [{"approved": {"$eq": approved}}, { "title" : { "$regex" : filter , "$options" : "i"} } ] }).toArray();
-  res.send(articles);
+  const totalCount = await db.collection(type).find({ $and: [{"approved": {"$eq": approved}}, { "title" : { "$regex" : filter , "$options" : "i"} } ] }).count()
+  const articles = await db.collection(type).find({ $and: [{"approved": {"$eq": approved}}, { "title" : { "$regex" : filter , "$options" : "i"} } ] }).skip( (pageNo - 1) * pageSize ).limit(2).toArray();
+  res.send({articles, totalPages: Math.ceil(totalCount / pageSize)});
 });
 
 app.get("/articles/:type/:id", async (req, res) => {
